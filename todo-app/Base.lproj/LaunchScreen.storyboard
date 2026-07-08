@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="13122.16" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="13104.12"/>
@@ -13,7 +13,31 @@
                     <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="TODOLaunchIcon" translatesAutoresizingMaskIntoConstraints="NO" id="TOD-0L-img">
+                                <rect key="frame" x="127.5" y="237.5" width="120" height="120"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="120" id="TOD-0L-img-width"/>
+                                    <constraint firstAttribute="height" constant="120" id="TOD-0L-img-height"/>
+                                </constraints>
+                            </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="TODO App" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="TOD-0L-title">
+                                <rect key="frame" x="97.5" y="381.5" width="180" height="38"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="180" id="TOD-0L-title-width"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="boldSystem" pointSize="32"/>
+                                <color key="textColor" red="0.1176470588" green="0.1176470588" blue="0.1176470588" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
                         <color key="backgroundColor" xcode11CocoaTouchSystemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
+                        <constraints>
+                            <constraint firstItem="TOD-0L-img" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="TOD-0L-img-centerX"/>
+                            <constraint firstItem="TOD-0L-img" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-38" id="TOD-0L-img-centerY"/>
+                            <constraint firstItem="TOD-0L-title" firstAttribute="top" secondItem="TOD-0L-img" secondAttribute="bottom" constant="24" id="TOD-0L-title-top"/>
+                            <constraint firstItem="TOD-0L-title" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="TOD-0L-title-centerX"/>
+                        </constraints>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                     </view>
                 </viewController>
@@ -22,4 +46,7 @@
             <point key="canvasLocation" x="53" y="375"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="TODOLaunchIcon" width="160" height="160"/>
+    </resources>
 </document>
