@@ -4,6 +4,7 @@ import UserNotifications
 final class ViewController: UIViewController {
     @IBOutlet var tableView: UITableView!
 
+    // Toolbar button used to remove every task that is marked complete.
     private lazy var deleteCompletedButton = UIBarButtonItem(
         title: "Delete All Completed",
         style: .plain,
@@ -12,8 +13,7 @@ final class ViewController: UIViewController {
     )
 
     private let store = Model.TodoStore()
-    private let notificationCenter = UNUserNotificationCenter.current()
-    private let notifiedTaskIdentifiersKey = "notifiedDueTaskIdentifiers"
+
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -21,6 +21,14 @@ final class ViewController: UIViewController {
         return formatter
     }()
 
+    // These are used to send task data as a local notification.
+    private let notificationCenter = UNUserNotificationCenter.current()
+    private let notifiedTaskIdentifiersKey = "notifiedDueTaskIdentifiers"
+
+    // The table view is driven by this array.
+    // Any change is immediately saved,
+    // reflected in the navigation title and toolbar,
+    // and checked for due alerts.
     private var tasks: [Model.TodoTask] = [] {
         didSet {
             do {
@@ -35,6 +43,8 @@ final class ViewController: UIViewController {
         }
     }
 
+    // Keeps the table view's editing mode and
+    // the navigation button title in sync.
     override var isEditing: Bool {
         didSet {
             tableView.setEditing(isEditing, animated: true)
@@ -50,6 +60,8 @@ final class ViewController: UIViewController {
         loadTasks()
     }
 
+    // Loads saved tasks when the app opens.
+    // If reading the saved tasks fails, an error dialog is displayed.
     private func loadTasks() {
         do {
             tasks = try store.loadTasks()
@@ -59,10 +71,13 @@ final class ViewController: UIViewController {
         }
     }
 
+    // This is called by storyboard action wiring, not directly from code.
     @objc func toggleEditing() {
         isEditing.toggle()
     }
 
+    // Presents a task editor with no existing task
+    // and inserts the saved task into the table.
     @objc func addTask() {
         presentTaskEditor(title: "New Task", task: nil) { [weak self] task in
             guard let self else { return }
@@ -74,12 +89,14 @@ final class ViewController: UIViewController {
         }
     }
 
+    // Removes all completed items and refreshes the task table.
     @objc func deleteAllCompleted() {
         guard tasks.contains(where: { $0.isComplete }) else { return }
         tasks.removeAll { $0.isComplete }
         tableView.reloadData()
     }
 
+    // Builds the bottom toolbar with the delete-completed button centered.
     private func configureToolbar() {
         let flexibleSpace = UIBarButtonItem(
             barButtonSystemItem: .flexibleSpace,
@@ -91,16 +108,22 @@ final class ViewController: UIViewController {
         updateDeleteCompletedButtonState()
     }
 
+    // Updates whether the "Delete All Completed" button is enabled.
     private func updateDeleteCompletedButtonState() {
         deleteCompletedButton.isEnabled = tasks.contains { $0.isComplete }
     }
 
+    // Shows progress in the navigation bar as completed tasks are toggled.
     private func updateRemainingTodosTitle() {
         let remainingCount = tasks.filter { !$0.isComplete }.count
         navigationItem
             .title = "\(remainingCount) of \(tasks.count) todos remaining"
     }
 
+    // Finds incomplete tasks due today or earlier
+    // and schedules one local notification per task.
+    // UserDefaults tracks which due tasks already triggered
+    // so updates do not repeat alerts.
     private func notifyForDueTasks() {
         let dueTasks = tasks.filter { shouldNotify(for: $0) }
         let dueTaskIdentifiers = Set(dueTasks.map(notificationIdentifier(for:)))
@@ -139,14 +162,17 @@ final class ViewController: UIViewController {
         }
     }
 
+    // A task notification should be generated only when
+    // it is unfinished and its due date is not in the future.
     private func shouldNotify(for task: Model.TodoTask) -> Bool {
-        !task.isComplete && Calendar.current.compare(
-            task.dueDate,
-            to: Date(),
-            toGranularity: .day
-        ) != .orderedDescending
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dueDay = calendar.startOfDay(for: task.dueDate)
+        return !task.isComplete && dueDay <= today
     }
 
+    // Checks the current notification permission
+    // and asks the user only if needed.
     private func requestNotificationAuthorizationIfNeeded(
         completion: @escaping (Bool) -> Void
     ) {
@@ -168,6 +194,7 @@ final class ViewController: UIViewController {
         }
     }
 
+    // Creates an immediate local notification describing which task is due.
     private func scheduleDueNotification(
         for task: Model.TodoTask,
         identifier: String
@@ -191,6 +218,8 @@ final class ViewController: UIViewController {
         Calendar.current.isDateInToday(task.dueDate) ? "today" : "in the past"
     }
 
+    // Builds a stable notification ID from task fields so the same due task is
+    // not notified twice.
     private func notificationIdentifier(for task: Model.TodoTask) -> String {
         let rawIdentifier =
             "\(task.description)|\(task.dueDate.timeIntervalSince1970)|\(task.priority.rawValue)"
@@ -202,6 +231,8 @@ final class ViewController: UIViewController {
         return "due-task-\(encodedIdentifier)"
     }
 
+    // Opens the storyboard-based editor for either a new task or an existing
+    // task.
     private func presentTaskEditor(
         title: String,
         task: Model.TodoTask?,
@@ -222,16 +253,21 @@ final class ViewController: UIViewController {
         present(navigationController, animated: true)
     }
 
+    // Deletes the selected task from both the model array and the table view.
     private func deleteTask(at indexPath: IndexPath) {
         tasks.remove(at: indexPath.row)
         tableView.deleteRows(at: [indexPath], with: .automatic)
     }
 
+    // Toggles the checkmark state for a task when the user taps its row outside
+    // edit mode.
     private func toggleCompletion(at indexPath: IndexPath) {
         tasks[indexPath.row].isComplete.toggle()
         tableView.reloadRows(at: [indexPath], with: .automatic)
     }
 
+    // Reuses the editor with the selected task's current values and writes back
+    // the result.
     private func editTask(at indexPath: IndexPath) {
         presentTaskEditor(
             title: "Edit Task",
@@ -244,6 +280,8 @@ final class ViewController: UIViewController {
         }
     }
 
+    // Presents the iOS share sheet with a plain-text summary of the selected
+    // task.
     private func shareTask(at indexPath: IndexPath, from sourceView: UIView) {
         guard tasks.indices.contains(indexPath.row) else { return }
 
@@ -259,6 +297,8 @@ final class ViewController: UIViewController {
         present(activityController, animated: true)
     }
 
+    // Formats each table row with task text, due date, priority color, and
+    // completion checkmark.
     private func configure(_ cell: UITableViewCell, with task: Model.TodoTask) {
         var content = UIListContentConfiguration.subtitleCell()
         content.text = task.description
@@ -278,7 +318,7 @@ final class ViewController: UIViewController {
         cell.selectionStyle = .default
     }
 
-    private func color(for priority: Model.TodoTask.Priority) -> UIColor {
+    private func color(for priority: Model.Priority) -> UIColor {
         switch priority {
         case .low:
             return .systemBlue
@@ -310,6 +350,7 @@ final class ViewController: UIViewController {
     }
 }
 
+// Supplies rows to the table view from the tasks array.
 extension ViewController: UITableViewDataSource {
     func tableView(
         _ tableView: UITableView,
@@ -348,6 +389,8 @@ extension ViewController: UITableViewDataSource {
     }
 }
 
+// Handles row taps and swipe actions for editing, sharing, deleting, and
+// completion toggles.
 extension ViewController: UITableViewDelegate {
     func tableView(
         _ tableView: UITableView,
@@ -406,6 +449,7 @@ extension ViewController: UITableViewDelegate {
     }
 }
 
+// Allows due-task notifications to appear even while the app is open.
 extension ViewController: UNUserNotificationCenterDelegate {
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
@@ -418,11 +462,14 @@ extension ViewController: UNUserNotificationCenterDelegate {
     }
 }
 
+// Modal screen used for creating a new task or editing an existing one.
 final class TaskEditorViewController: UIViewController {
     @IBOutlet var descriptionField: UITextField!
     @IBOutlet var dueDatePicker: UIDatePicker!
     @IBOutlet var priorityControl: UISegmentedControl!
 
+    // Existing task is nil when creating a new todo; onSave passes the finished
+    // value back.
     var task: Model.TodoTask?
     var onSave: ((Model.TodoTask) -> Void)?
 
@@ -433,11 +480,12 @@ final class TaskEditorViewController: UIViewController {
         populateFields()
     }
 
+    // Pre-fills the form when the user is editing an existing task.
     private func populateFields() {
         guard let task else { return }
         descriptionField.text = task.description
         dueDatePicker.date = task.dueDate
-        priorityControl.selectedSegmentIndex = Model.TodoTask.Priority.allCases
+        priorityControl.selectedSegmentIndex = Model.Priority.allCases
             .firstIndex(of: task.priority) ?? 0
     }
 
@@ -445,6 +493,8 @@ final class TaskEditorViewController: UIViewController {
         dismiss(animated: true)
     }
 
+    // Validates the form, builds a TodoTask, and returns it to the presenting
+    // controller.
     @objc func save() {
         let trimmedDescription = descriptionField.text?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -453,7 +503,7 @@ final class TaskEditorViewController: UIViewController {
             return
         }
 
-        let priority = Model.TodoTask.Priority
+        let priority = Model.Priority
             .allCases[priorityControl.selectedSegmentIndex]
         let savedTask = Model.TodoTask(
             description: trimmedDescription,
@@ -476,6 +526,7 @@ final class TaskEditorViewController: UIViewController {
     }
 }
 
+// Dismisses the keyboard when the user taps Return in the description field.
 extension TaskEditorViewController: UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
