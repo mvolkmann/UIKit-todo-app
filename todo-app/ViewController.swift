@@ -2,6 +2,7 @@ import UIKit
 import UserNotifications
 
 struct TodoTask: Codable, Equatable {
+    // Making this CaseIterable enables using Priority.allCases.
     enum Priority: String, Codable, CaseIterable {
         case low = "Low"
         case medium = "Medium"
@@ -47,7 +48,7 @@ final class TodoStore {
 }
 
 final class ViewController: UIViewController {
-    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet var tableView: UITableView!
 
     private lazy var deleteCompletedButton = UIBarButtonItem(
         title: "Delete All Completed",
@@ -128,7 +129,8 @@ final class ViewController: UIViewController {
 
     private func updateRemainingTodosTitle() {
         let remainingCount = tasks.filter { !$0.isComplete }.count
-        navigationItem.title = "\(remainingCount) of \(tasks.count) todos remaining"
+        navigationItem
+            .title = "\(remainingCount) of \(tasks.count) todos remaining"
     }
 
     private func notifyForDueTasks() {
@@ -141,7 +143,8 @@ final class ViewController: UIViewController {
         let stillRelevantNotifiedIdentifiers = notifiedIdentifiers
             .intersection(dueTaskIdentifiers)
         let tasksToNotify = dueTasks.filter {
-            !stillRelevantNotifiedIdentifiers.contains(notificationIdentifier(for: $0))
+            !stillRelevantNotifiedIdentifiers
+                .contains(notificationIdentifier(for: $0))
         }
 
         defaults.set(
@@ -203,7 +206,9 @@ final class ViewController: UIViewController {
     ) {
         let content = UNMutableNotificationContent()
         content.title = "Task Due"
-        content.body = "\"\(task.description)\" is due \(dueStatusText(for: task))."
+        content
+            .body =
+            "\"\(task.description)\" is due \(dueStatusText(for: task))."
         content.sound = .default
 
         let request = UNNotificationRequest(
@@ -219,7 +224,8 @@ final class ViewController: UIViewController {
     }
 
     private func notificationIdentifier(for task: TodoTask) -> String {
-        let rawIdentifier = "\(task.description)|\(task.dueDate.timeIntervalSince1970)|\(task.priority.rawValue)"
+        let rawIdentifier =
+            "\(task.description)|\(task.dueDate.timeIntervalSince1970)|\(task.priority.rawValue)"
         let encodedIdentifier = Data(rawIdentifier.utf8)
             .base64EncodedString()
             .replacingOccurrences(of: "/", with: "_")
@@ -242,7 +248,8 @@ final class ViewController: UIViewController {
         editor.task = task
         editor.onSave = completion
 
-        let navigationController = UINavigationController(rootViewController: editor)
+        let navigationController =
+            UINavigationController(rootViewController: editor)
         navigationController.modalPresentationStyle = .formSheet
         present(navigationController, animated: true)
     }
@@ -262,7 +269,8 @@ final class ViewController: UIViewController {
             title: "Edit Task",
             task: tasks[indexPath.row]
         ) { [weak self] updatedTask in
-            guard let self, tasks.indices.contains(indexPath.row) else { return }
+            guard let self,
+                  tasks.indices.contains(indexPath.row) else { return }
             tasks[indexPath.row] = updatedTask
             tableView.reloadRows(at: [indexPath], with: .automatic)
         }
@@ -272,12 +280,14 @@ final class ViewController: UIViewController {
         guard tasks.indices.contains(indexPath.row) else { return }
 
         let task = tasks[indexPath.row]
-        let shareText = "\(task.description)\nDue \(dateFormatter.string(from: task.dueDate))\nPriority: \(task.priority.rawValue)"
+        let shareText =
+            "\(task.description)\nDue \(dateFormatter.string(from: task.dueDate))\nPriority: \(task.priority.rawValue)"
         let activityController = UIActivityViewController(
             activityItems: [shareText],
             applicationActivities: nil
         )
-        activityController.popoverPresentationController?.sourceView = sourceView
+        activityController.popoverPresentationController?
+            .sourceView = sourceView
         present(activityController, animated: true)
     }
 
@@ -286,7 +296,8 @@ final class ViewController: UIViewController {
         content.text = task.description
         content.secondaryText =
             "Due \(dateFormatter.string(from: task.dueDate)) • \(task.priority.rawValue) priority"
-        content.textProperties.color = task.isComplete ? .secondaryLabel : .label
+        content.textProperties.color = task
+            .isComplete ? .secondaryLabel : .label
         content.secondaryTextProperties.color = color(for: task.priority)
         content.directionalLayoutMargins = NSDirectionalEdgeInsets(
             top: 8,
@@ -420,9 +431,9 @@ extension ViewController: UNUserNotificationCenterDelegate {
 }
 
 final class TaskEditorViewController: UIViewController {
-    @IBOutlet weak var descriptionField: UITextField!
-    @IBOutlet weak var dueDatePicker: UIDatePicker!
-    @IBOutlet weak var priorityControl: UISegmentedControl!
+    @IBOutlet var descriptionField: UITextField!
+    @IBOutlet var dueDatePicker: UIDatePicker!
+    @IBOutlet var priorityControl: UISegmentedControl!
 
     var task: TodoTask?
     var onSave: ((TodoTask) -> Void)?
