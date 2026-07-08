@@ -402,18 +402,7 @@ extension ViewController: UITableViewDelegate {
         }
         deleteAction.image = UIImage(systemName: "trash")
 
-        let cancelAction = UIContextualAction(
-            style: .normal,
-            title: "Cancel"
-        ) { _, _, completion in
-            completion(false)
-        }
-        cancelAction.backgroundColor = .systemGray
-
-        return UISwipeActionsConfiguration(actions: [
-            deleteAction,
-            cancelAction
-        ])
+        return UISwipeActionsConfiguration(actions: [deleteAction])
     }
 }
 
