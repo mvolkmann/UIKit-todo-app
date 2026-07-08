@@ -369,12 +369,13 @@ extension ViewController: UITableViewDelegate {
     ) -> UISwipeActionsConfiguration? {
         let editAction = UIContextualAction(
             style: .normal,
-            title: "Edit"
+            title: nil
         ) { [weak self] _, _, completion in
             self?.editTask(at: indexPath)
             completion(true)
         }
         editAction.backgroundColor = .systemBlue
+        editAction.image = UIImage(systemName: "pencil")
 
         let shareAction = UIContextualAction(
             style: .normal,
