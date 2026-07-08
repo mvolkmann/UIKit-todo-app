@@ -234,25 +234,24 @@ extension ViewController: UITableViewDelegate {
     ) -> UISwipeActionsConfiguration? {
         let deleteAction = UIContextualAction(
             style: .destructive,
-            title: "Delete"
+            title: nil
         ) { [weak self] _, _, completion in
             self?.confirmDeleteTask(at: indexPath)
             completion(false)
         }
+        deleteAction.image = UIImage(systemName: "trash")
 
-        let completeTitle = tasks[indexPath.row].isComplete ? "Open" : "Done"
-        let completeAction = UIContextualAction(
+        let cancelAction = UIContextualAction(
             style: .normal,
-            title: completeTitle
-        ) { [weak self] _, _, completion in
-            self?.toggleCompletion(at: indexPath)
-            completion(true)
+            title: "Cancel"
+        ) { _, _, completion in
+            completion(false)
         }
-        completeAction.backgroundColor = .systemGreen
+        cancelAction.backgroundColor = .systemGray
 
         return UISwipeActionsConfiguration(actions: [
             deleteAction,
-            completeAction
+            cancelAction
         ])
     }
 }
