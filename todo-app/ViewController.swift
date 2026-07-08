@@ -268,7 +268,7 @@ final class TaskEditorViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         descriptionField.delegate = self
-        dueDatePicker.preferredDatePickerStyle = .inline
+        dueDatePicker.preferredDatePickerStyle = .compact
         populateFields()
     }
 
