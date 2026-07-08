@@ -1,52 +1,6 @@
 import UIKit
 import UserNotifications
 
-struct TodoTask: Codable, Equatable {
-    // Making this CaseIterable enables using Priority.allCases.
-    enum Priority: String, Codable, CaseIterable {
-        case low = "Low"
-        case medium = "Medium"
-        case high = "High"
-    }
-
-    var description: String
-    var dueDate: Date
-    var priority: Priority
-    var isComplete: Bool
-}
-
-final class TodoStore {
-    private let fileURL: URL
-
-    init(fileManager: FileManager = .default) {
-        let documentsDirectory = fileManager.urls(
-            for: .documentDirectory,
-            in: .userDomainMask
-        )[0]
-        fileURL = documentsDirectory.appendingPathComponent("tasks.json")
-    }
-
-    func loadTasks() -> [TodoTask] {
-        do {
-            let data = try Data(contentsOf: fileURL)
-            return try JSONDecoder().decode([TodoTask].self, from: data)
-        } catch {
-            return []
-        }
-    }
-
-    func saveTasks(_ tasks: [TodoTask]) {
-        do {
-            let data = try JSONEncoder().encode(tasks)
-            try data.write(to: fileURL, options: [.atomic])
-        } catch {
-            assertionFailure(
-                "Unable to save tasks: \(error.localizedDescription)"
-            )
-        }
-    }
-}
-
 final class ViewController: UIViewController {
     @IBOutlet var tableView: UITableView!
 
@@ -57,7 +11,7 @@ final class ViewController: UIViewController {
         action: #selector(deleteAllCompleted)
     )
 
-    private let store = TodoStore()
+    private let store = Model.TodoStore()
     private let notificationCenter = UNUserNotificationCenter.current()
     private let notifiedTaskIdentifiersKey = "notifiedDueTaskIdentifiers"
     private let dateFormatter: DateFormatter = {
@@ -67,7 +21,7 @@ final class ViewController: UIViewController {
         return formatter
     }()
 
-    private var tasks: [TodoTask] = [] {
+    private var tasks: [Model.TodoTask] = [] {
         didSet {
             store.saveTasks(tasks)
             updateRemainingTodosTitle()
@@ -171,7 +125,7 @@ final class ViewController: UIViewController {
         }
     }
 
-    private func shouldNotify(for task: TodoTask) -> Bool {
+    private func shouldNotify(for task: Model.TodoTask) -> Bool {
         !task.isComplete && Calendar.current.compare(
             task.dueDate,
             to: Date(),
@@ -201,7 +155,7 @@ final class ViewController: UIViewController {
     }
 
     private func scheduleDueNotification(
-        for task: TodoTask,
+        for task: Model.TodoTask,
         identifier: String
     ) {
         let content = UNMutableNotificationContent()
@@ -219,11 +173,11 @@ final class ViewController: UIViewController {
         notificationCenter.add(request)
     }
 
-    private func dueStatusText(for task: TodoTask) -> String {
+    private func dueStatusText(for task: Model.TodoTask) -> String {
         Calendar.current.isDateInToday(task.dueDate) ? "today" : "in the past"
     }
 
-    private func notificationIdentifier(for task: TodoTask) -> String {
+    private func notificationIdentifier(for task: Model.TodoTask) -> String {
         let rawIdentifier =
             "\(task.description)|\(task.dueDate.timeIntervalSince1970)|\(task.priority.rawValue)"
         let encodedIdentifier = Data(rawIdentifier.utf8)
@@ -236,8 +190,8 @@ final class ViewController: UIViewController {
 
     private func presentTaskEditor(
         title: String,
-        task: TodoTask?,
-        completion: @escaping (TodoTask) -> Void
+        task: Model.TodoTask?,
+        completion: @escaping (Model.TodoTask) -> Void
     ) {
         let editor = storyboard?.instantiateViewController(
             withIdentifier: "TaskEditorViewController"
@@ -291,7 +245,7 @@ final class ViewController: UIViewController {
         present(activityController, animated: true)
     }
 
-    private func configure(_ cell: UITableViewCell, with task: TodoTask) {
+    private func configure(_ cell: UITableViewCell, with task: Model.TodoTask) {
         var content = UIListContentConfiguration.subtitleCell()
         content.text = task.description
         content.secondaryText =
@@ -310,7 +264,7 @@ final class ViewController: UIViewController {
         cell.selectionStyle = .default
     }
 
-    private func color(for priority: TodoTask.Priority) -> UIColor {
+    private func color(for priority: Model.TodoTask.Priority) -> UIColor {
         switch priority {
         case .low:
             return .systemBlue
@@ -435,8 +389,8 @@ final class TaskEditorViewController: UIViewController {
     @IBOutlet var dueDatePicker: UIDatePicker!
     @IBOutlet var priorityControl: UISegmentedControl!
 
-    var task: TodoTask?
-    var onSave: ((TodoTask) -> Void)?
+    var task: Model.TodoTask?
+    var onSave: ((Model.TodoTask) -> Void)?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -449,7 +403,7 @@ final class TaskEditorViewController: UIViewController {
         guard let task else { return }
         descriptionField.text = task.description
         dueDatePicker.date = task.dueDate
-        priorityControl.selectedSegmentIndex = TodoTask.Priority.allCases
+        priorityControl.selectedSegmentIndex = Model.TodoTask.Priority.allCases
             .firstIndex(of: task.priority) ?? 0
     }
 
@@ -465,9 +419,9 @@ final class TaskEditorViewController: UIViewController {
             return
         }
 
-        let priority = TodoTask.Priority
+        let priority = Model.TodoTask.Priority
             .allCases[priorityControl.selectedSegmentIndex]
-        let savedTask = TodoTask(
+        let savedTask = Model.TodoTask(
             description: trimmedDescription,
             dueDate: dueDatePicker.date,
             priority: priority,
