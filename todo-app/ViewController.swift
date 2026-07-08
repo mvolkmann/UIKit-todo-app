@@ -194,7 +194,7 @@ final class ViewController: UIViewController {
         }
     }
 
-    // Creates an immediate local notification describing which task is due.
+    // Creates an immediate local notification describing a task that is due.
     private func scheduleDueNotification(
         for task: Model.TodoTask,
         identifier: String
@@ -214,12 +214,13 @@ final class ViewController: UIViewController {
         notificationCenter.add(request)
     }
 
+    // Gets text to describe when a task is due.
     private func dueStatusText(for task: Model.TodoTask) -> String {
         Calendar.current.isDateInToday(task.dueDate) ? "today" : "in the past"
     }
 
-    // Builds a stable notification ID from task fields so the same due task is
-    // not notified twice.
+    // Builds a notification ID from task fields so notifications
+    // for the same due task are not sent multiple times.
     private func notificationIdentifier(for task: Model.TodoTask) -> String {
         let rawIdentifier =
             "\(task.description)|\(task.dueDate.timeIntervalSince1970)|\(task.priority.rawValue)"
@@ -231,8 +232,7 @@ final class ViewController: UIViewController {
         return "due-task-\(encodedIdentifier)"
     }
 
-    // Opens the storyboard-based editor for either a new task or an existing
-    // task.
+    // Opens a task editor for a new or existing task.
     private func presentTaskEditor(
         title: String,
         task: Model.TodoTask?,
@@ -259,15 +259,15 @@ final class ViewController: UIViewController {
         tableView.deleteRows(at: [indexPath], with: .automatic)
     }
 
-    // Toggles the checkmark state for a task when the user taps its row outside
-    // edit mode.
+    // Toggles the checkmark state for a task
+    // when the user taps its row outside edit mode.
     private func toggleCompletion(at indexPath: IndexPath) {
         tasks[indexPath.row].isComplete.toggle()
         tableView.reloadRows(at: [indexPath], with: .automatic)
     }
 
-    // Reuses the editor with the selected task's current values and writes back
-    // the result.
+    // Reuses the editor with the selected task's current values
+    // and writes back the result.
     private func editTask(at indexPath: IndexPath) {
         presentTaskEditor(
             title: "Edit Task",
@@ -280,8 +280,8 @@ final class ViewController: UIViewController {
         }
     }
 
-    // Presents the iOS share sheet with a plain-text summary of the selected
-    // task.
+    // Presents the iOS share sheet with
+    // a plain-text summary of the selected task.
     private func shareTask(at indexPath: IndexPath, from sourceView: UIView) {
         guard tasks.indices.contains(indexPath.row) else { return }
 
@@ -297,8 +297,8 @@ final class ViewController: UIViewController {
         present(activityController, animated: true)
     }
 
-    // Formats each table row with task text, due date, priority color, and
-    // completion checkmark.
+    // Formats each table row with task text, due date,
+    // priority color, and a checkmark (if completed).
     private func configure(_ cell: UITableViewCell, with task: Model.TodoTask) {
         var content = UIListContentConfiguration.subtitleCell()
         content.text = task.description
@@ -318,6 +318,7 @@ final class ViewController: UIViewController {
         cell.selectionStyle = .default
     }
 
+    // Gets the color associated with a given priority.
     private func color(for priority: Model.Priority) -> UIColor {
         switch priority {
         case .low:
@@ -329,6 +330,7 @@ final class ViewController: UIViewController {
         }
     }
 
+    // Displays an alert for a given error during task loading.
     private func showLoadTasksErrorAlert(_ error: Error) {
         let alert = UIAlertController(
             title: "Unable to Load Tasks",
@@ -339,6 +341,7 @@ final class ViewController: UIViewController {
         present(alert, animated: true)
     }
 
+    // Displays an alert for a given error during task saving.
     private func showSaveTasksErrorAlert(_ error: Error) {
         let alert = UIAlertController(
             title: "Unable to Save Tasks",
@@ -352,6 +355,7 @@ final class ViewController: UIViewController {
 
 // Supplies rows to the table view from the tasks array.
 extension ViewController: UITableViewDataSource {
+    // Gets the number of rows to display.
     func tableView(
         _ tableView: UITableView,
         numberOfRowsInSection section: Int
@@ -359,6 +363,7 @@ extension ViewController: UITableViewDataSource {
         tasks.count
     }
 
+    // Gets the table cell for a given index within the table.
     func tableView(
         _ tableView: UITableView,
         cellForRowAt indexPath: IndexPath
@@ -371,6 +376,8 @@ extension ViewController: UITableViewDataSource {
         return cell
     }
 
+    // Determines whether the table row at a given index
+    // can be edited (always true).
     func tableView(
         _ tableView: UITableView,
         canEditRowAt indexPath: IndexPath
@@ -378,6 +385,8 @@ extension ViewController: UITableViewDataSource {
         true
     }
 
+    // Enables swipe-to-delete behavior for table rows
+    // which correspond to a specific task.
     func tableView(
         _ tableView: UITableView,
         commit editingStyle: UITableViewCell.EditingStyle,
@@ -389,9 +398,10 @@ extension ViewController: UITableViewDataSource {
     }
 }
 
-// Handles row taps and swipe actions for editing, sharing, deleting, and
-// completion toggles.
+// Handles row taps and swipe actions for
+// editing, sharing, deleting, and completion toggles.
 extension ViewController: UITableViewDelegate {
+    // Handles taps on a table row at a given index.
     func tableView(
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
@@ -405,6 +415,8 @@ extension ViewController: UITableViewDelegate {
         }
     }
 
+    // Configures the leading swipe actions for a task row
+    // to show the edit and share buttons.
     func tableView(
         _ tableView: UITableView,
         leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
@@ -432,6 +444,8 @@ extension ViewController: UITableViewDelegate {
         return UISwipeActionsConfiguration(actions: [editAction, shareAction])
     }
 
+    // Configures the leading swipe actions for a task row
+    // to show the delete button.
     func tableView(
         _ tableView: UITableView,
         trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
@@ -468,9 +482,11 @@ final class TaskEditorViewController: UIViewController {
     @IBOutlet var dueDatePicker: UIDatePicker!
     @IBOutlet var priorityControl: UISegmentedControl!
 
-    // Existing task is nil when creating a new todo; onSave passes the finished
-    // value back.
+    // This property is nil when creating a new todo.
     var task: Model.TodoTask?
+
+    // This is an optional callback that is used to hand the
+    // saved TodoTask back to whatever presented it.
     var onSave: ((Model.TodoTask) -> Void)?
 
     override func viewDidLoad() {
@@ -480,7 +496,7 @@ final class TaskEditorViewController: UIViewController {
         populateFields()
     }
 
-    // Pre-fills the form when the user is editing an existing task.
+    // Populates the form with task data when editing an existing task.
     private func populateFields() {
         guard let task else { return }
         descriptionField.text = task.description
@@ -489,12 +505,15 @@ final class TaskEditorViewController: UIViewController {
             .firstIndex(of: task.priority) ?? 0
     }
 
+    // This is called when the task editor is displayed
+    // and the user clicks the "X" button in the upper-left.
+    // It just dismisses the task editor.
     @objc func cancel() {
         dismiss(animated: true)
     }
 
-    // Validates the form, builds a TodoTask, and returns it to the presenting
-    // controller.
+    // Validates the form, builds a TodoTask,
+    // and returns it to the presenting controller.
     @objc func save() {
         let trimmedDescription = descriptionField.text?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -515,6 +534,8 @@ final class TaskEditorViewController: UIViewController {
         dismiss(animated: true)
     }
 
+    // Displays an alert when the user attempts to
+    // save a task with not description.
     private func showMissingDescriptionAlert() {
         let alert = UIAlertController(
             title: "Description Required",
@@ -526,7 +547,8 @@ final class TaskEditorViewController: UIViewController {
     }
 }
 
-// Dismisses the keyboard when the user taps Return in the description field.
+// Dismisses the keyboard when focus is in the description input
+// and the user taps the return key (blue with a white checkmark).
 extension TaskEditorViewController: UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
