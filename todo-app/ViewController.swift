@@ -268,6 +268,19 @@ final class ViewController: UIViewController {
         }
     }
 
+    private func shareTask(at indexPath: IndexPath, from sourceView: UIView) {
+        guard tasks.indices.contains(indexPath.row) else { return }
+
+        let task = tasks[indexPath.row]
+        let shareText = "\(task.description)\nDue \(dateFormatter.string(from: task.dueDate))\nPriority: \(task.priority.rawValue)"
+        let activityController = UIActivityViewController(
+            activityItems: [shareText],
+            applicationActivities: nil
+        )
+        activityController.popoverPresentationController?.sourceView = sourceView
+        present(activityController, animated: true)
+    }
+
     private func configure(_ cell: UITableViewCell, with task: TodoTask) {
         var content = UIListContentConfiguration.subtitleCell()
         content.text = task.description
@@ -363,7 +376,17 @@ extension ViewController: UITableViewDelegate {
         }
         editAction.backgroundColor = .systemBlue
 
-        return UISwipeActionsConfiguration(actions: [editAction])
+        let shareAction = UIContextualAction(
+            style: .normal,
+            title: nil
+        ) { [weak self] _, sourceView, completion in
+            self?.shareTask(at: indexPath, from: sourceView)
+            completion(true)
+        }
+        shareAction.backgroundColor = .systemGreen
+        shareAction.image = UIImage(systemName: "square.and.arrow.up")
+
+        return UISwipeActionsConfiguration(actions: [editAction, shareAction])
     }
 
     func tableView(
