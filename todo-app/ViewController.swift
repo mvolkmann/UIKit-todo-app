@@ -23,7 +23,12 @@ final class ViewController: UIViewController {
 
     private var tasks: [Model.TodoTask] = [] {
         didSet {
-            store.saveTasks(tasks)
+            do {
+                try store.saveTasks(tasks)
+            } catch {
+                showSaveTasksErrorAlert(error)
+            }
+
             updateRemainingTodosTitle()
             updateDeleteCompletedButtonState()
             notifyForDueTasks()
@@ -42,7 +47,16 @@ final class ViewController: UIViewController {
         super.viewDidLoad()
         notificationCenter.delegate = self
         configureToolbar()
-        tasks = store.loadTasks()
+        loadTasks()
+    }
+
+    private func loadTasks() {
+        do {
+            tasks = try store.loadTasks()
+        } catch {
+            showLoadTasksErrorAlert(error)
+            tasks = []
+        }
     }
 
     @objc func toggleEditing() {
@@ -273,6 +287,26 @@ final class ViewController: UIViewController {
         case .high:
             return .systemRed
         }
+    }
+
+    private func showLoadTasksErrorAlert(_ error: Error) {
+        let alert = UIAlertController(
+            title: "Unable to Load Tasks",
+            message: "Your saved tasks could not be loaded. \(error.localizedDescription)",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
+    private func showSaveTasksErrorAlert(_ error: Error) {
+        let alert = UIAlertController(
+            title: "Unable to Save Tasks",
+            message: "Your tasks could not be saved. \(error.localizedDescription)",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 }
 

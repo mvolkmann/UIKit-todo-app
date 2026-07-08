@@ -26,24 +26,14 @@ enum Model {
             fileURL = documentsDirectory.appendingPathComponent("tasks.json")
         }
 
-        func loadTasks() -> [TodoTask] {
-            do {
-                let data = try Data(contentsOf: fileURL)
-                return try JSONDecoder().decode([TodoTask].self, from: data)
-            } catch {
-                return []
-            }
+        func loadTasks() throws -> [TodoTask] {
+            let data = try Data(contentsOf: fileURL)
+            return try JSONDecoder().decode([TodoTask].self, from: data)
         }
 
-        func saveTasks(_ tasks: [TodoTask]) {
-            do {
-                let data = try JSONEncoder().encode(tasks)
-                try data.write(to: fileURL, options: [.atomic])
-            } catch {
-                assertionFailure(
-                    "Unable to save tasks: \(error.localizedDescription)"
-                )
-            }
+        func saveTasks(_ tasks: [TodoTask]) throws {
+            let data = try JSONEncoder().encode(tasks)
+            try data.write(to: fileURL, options: [.atomic])
         }
     }
 }
