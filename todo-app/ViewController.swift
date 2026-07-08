@@ -1,4 +1,5 @@
 import UIKit
+import UserNotifications
 
 struct TodoTask: Codable, Equatable {
     enum Priority: String, Codable, CaseIterable {
@@ -56,6 +57,8 @@ final class ViewController: UIViewController {
     )
 
     private let store = TodoStore()
+    private let notificationCenter = UNUserNotificationCenter.current()
+    private let notifiedTaskIdentifiersKey = "notifiedDueTaskIdentifiers"
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -68,6 +71,7 @@ final class ViewController: UIViewController {
             store.saveTasks(tasks)
             updateRemainingTodosTitle()
             updateDeleteCompletedButtonState()
+            notifyForDueTasks()
         }
     }
 
@@ -81,6 +85,7 @@ final class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        notificationCenter.delegate = self
         configureToolbar()
         tasks = store.loadTasks()
     }
@@ -124,6 +129,103 @@ final class ViewController: UIViewController {
     private func updateRemainingTodosTitle() {
         let remainingCount = tasks.filter { !$0.isComplete }.count
         navigationItem.title = "\(remainingCount) of \(tasks.count) todos remaining"
+    }
+
+    private func notifyForDueTasks() {
+        let dueTasks = tasks.filter { shouldNotify(for: $0) }
+        let dueTaskIdentifiers = Set(dueTasks.map(notificationIdentifier(for:)))
+        let defaults = UserDefaults.standard
+        let notifiedIdentifiers = Set(
+            defaults.stringArray(forKey: notifiedTaskIdentifiersKey) ?? []
+        )
+        let stillRelevantNotifiedIdentifiers = notifiedIdentifiers
+            .intersection(dueTaskIdentifiers)
+        let tasksToNotify = dueTasks.filter {
+            !stillRelevantNotifiedIdentifiers.contains(notificationIdentifier(for: $0))
+        }
+
+        defaults.set(
+            Array(stillRelevantNotifiedIdentifiers),
+            forKey: notifiedTaskIdentifiersKey
+        )
+
+        guard !tasksToNotify.isEmpty else { return }
+
+        requestNotificationAuthorizationIfNeeded { [weak self] isAuthorized in
+            guard let self, isAuthorized else { return }
+
+            var updatedIdentifiers = stillRelevantNotifiedIdentifiers
+            for task in tasksToNotify {
+                let identifier = notificationIdentifier(for: task)
+                scheduleDueNotification(for: task, identifier: identifier)
+                updatedIdentifiers.insert(identifier)
+            }
+
+            defaults.set(
+                Array(updatedIdentifiers),
+                forKey: notifiedTaskIdentifiersKey
+            )
+        }
+    }
+
+    private func shouldNotify(for task: TodoTask) -> Bool {
+        !task.isComplete && Calendar.current.compare(
+            task.dueDate,
+            to: Date(),
+            toGranularity: .day
+        ) != .orderedDescending
+    }
+
+    private func requestNotificationAuthorizationIfNeeded(
+        completion: @escaping (Bool) -> Void
+    ) {
+        notificationCenter.getNotificationSettings { [weak self] settings in
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                completion(true)
+            case .notDetermined:
+                self?.notificationCenter.requestAuthorization(
+                    options: [.alert, .sound]
+                ) { isGranted, _ in
+                    completion(isGranted)
+                }
+            case .denied:
+                completion(false)
+            @unknown default:
+                completion(false)
+            }
+        }
+    }
+
+    private func scheduleDueNotification(
+        for task: TodoTask,
+        identifier: String
+    ) {
+        let content = UNMutableNotificationContent()
+        content.title = "Task Due"
+        content.body = "\"\(task.description)\" is due \(dueStatusText(for: task))."
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: nil
+        )
+        notificationCenter.add(request)
+    }
+
+    private func dueStatusText(for task: TodoTask) -> String {
+        Calendar.current.isDateInToday(task.dueDate) ? "today" : "in the past"
+    }
+
+    private func notificationIdentifier(for task: TodoTask) -> String {
+        let rawIdentifier = "\(task.description)|\(task.dueDate.timeIntervalSince1970)|\(task.priority.rawValue)"
+        let encodedIdentifier = Data(rawIdentifier.utf8)
+            .base64EncodedString()
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "=", with: "")
+        return "due-task-\(encodedIdentifier)"
     }
 
     private func presentTaskEditor(
@@ -289,6 +391,18 @@ extension ViewController: UITableViewDelegate {
             deleteAction,
             cancelAction
         ])
+    }
+}
+
+extension ViewController: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (
+            UNNotificationPresentationOptions
+        ) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 }
 
