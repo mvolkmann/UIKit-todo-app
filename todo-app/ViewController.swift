@@ -59,6 +59,7 @@ final class ViewController: UIViewController {
     private var tasks: [TodoTask] = [] {
         didSet {
             store.saveTasks(tasks)
+            updateRemainingTodosTitle()
         }
     }
 
@@ -88,6 +89,11 @@ final class ViewController: UIViewController {
                 with: .automatic
             )
         }
+    }
+
+    private func updateRemainingTodosTitle() {
+        let remainingCount = tasks.filter { !$0.isComplete }.count
+        navigationItem.title = "\(remainingCount) of \(tasks.count) todos remaining"
     }
 
     private func presentTaskEditor(

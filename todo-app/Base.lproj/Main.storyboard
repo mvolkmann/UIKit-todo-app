@@ -24,7 +24,7 @@
             </objects>
             <point key="canvasLocation" x="-900" y="0.0"/>
         </scene>
-        <!--TODO-->
+        <!--0 of 0 todos remaining-->
         <scene sceneID="scene-main">
             <objects>
                 <viewController id="vc-main" customClass="ViewController" customModuleProvider="target" sceneMemberID="viewController">
@@ -60,7 +60,7 @@
                             <constraint firstAttribute="bottom" secondItem="tbl-tasks" secondAttribute="bottom" id="c-main-bottom"/>
                         </constraints>
                     </view>
-                    <navigationItem key="navigationItem" title="TODO" id="nav-main-item">
+                    <navigationItem key="navigationItem" title="0 of 0 todos remaining" id="nav-main-item">
                         <barButtonItem key="leftBarButtonItem" title="Edit" id="btn-edit">
                             <connections>
                                 <action selector="toggleEditing" destination="vc-main" id="act-edit"/>
