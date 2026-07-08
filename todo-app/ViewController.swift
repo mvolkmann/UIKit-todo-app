@@ -48,6 +48,13 @@ final class TodoStore {
 final class ViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
 
+    private lazy var deleteCompletedButton = UIBarButtonItem(
+        title: "Delete All Completed",
+        style: .plain,
+        target: self,
+        action: #selector(deleteAllCompleted)
+    )
+
     private let store = TodoStore()
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -60,6 +67,7 @@ final class ViewController: UIViewController {
         didSet {
             store.saveTasks(tasks)
             updateRemainingTodosTitle()
+            updateDeleteCompletedButtonState()
         }
     }
 
@@ -73,6 +81,7 @@ final class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        configureToolbar()
         tasks = store.loadTasks()
     }
 
@@ -89,6 +98,27 @@ final class ViewController: UIViewController {
                 with: .automatic
             )
         }
+    }
+
+    @objc func deleteAllCompleted() {
+        guard tasks.contains(where: { $0.isComplete }) else { return }
+        tasks.removeAll { $0.isComplete }
+        tableView.reloadData()
+    }
+
+    private func configureToolbar() {
+        let flexibleSpace = UIBarButtonItem(
+            barButtonSystemItem: .flexibleSpace,
+            target: nil,
+            action: nil
+        )
+        toolbarItems = [flexibleSpace, deleteCompletedButton, flexibleSpace]
+        navigationController?.setToolbarHidden(false, animated: false)
+        updateDeleteCompletedButtonState()
+    }
+
+    private func updateDeleteCompletedButtonState() {
+        deleteCompletedButton.isEnabled = tasks.contains { $0.isComplete }
     }
 
     private func updateRemainingTodosTitle() {
