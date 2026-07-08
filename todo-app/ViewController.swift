@@ -160,8 +160,9 @@ final class ViewController: UIViewController {
             title: "Edit Task",
             task: tasks[indexPath.row]
         ) { [weak self] updatedTask in
-            self?.tasks[indexPath.row] = updatedTask
-            self?.tableView.reloadRows(at: [indexPath], with: .automatic)
+            guard let self, tasks.indices.contains(indexPath.row) else { return }
+            tasks[indexPath.row] = updatedTask
+            tableView.reloadRows(at: [indexPath], with: .automatic)
         }
     }
 
@@ -186,7 +187,7 @@ final class ViewController: UIViewController {
     private func color(for priority: TodoTask.Priority) -> UIColor {
         switch priority {
         case .low:
-            return .systemGreen
+            return .systemBlue
         case .medium:
             return .systemOrange
         case .high:
@@ -245,6 +246,22 @@ extension ViewController: UITableViewDelegate {
         } else {
             toggleCompletion(at: indexPath)
         }
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        let editAction = UIContextualAction(
+            style: .normal,
+            title: "Edit"
+        ) { [weak self] _, _, completion in
+            self?.editTask(at: indexPath)
+            completion(true)
+        }
+        editAction.backgroundColor = .systemBlue
+
+        return UISwipeActionsConfiguration(actions: [editAction])
     }
 
     func tableView(
