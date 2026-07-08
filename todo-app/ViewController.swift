@@ -109,23 +109,6 @@ final class ViewController: UIViewController {
         present(navigationController, animated: true)
     }
 
-    private func confirmDeleteTask(at indexPath: IndexPath) {
-        let task = tasks[indexPath.row]
-        let alert = UIAlertController(
-            title: "Delete Task?",
-            message: "Delete \"\(task.description)\"?",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(
-            title: "Delete",
-            style: .destructive
-        ) { [weak self] _ in
-            self?.deleteTask(at: indexPath)
-        })
-        present(alert, animated: true)
-    }
-
     private func deleteTask(at indexPath: IndexPath) {
         tasks.remove(at: indexPath.row)
         tableView.deleteRows(at: [indexPath], with: .automatic)
@@ -209,7 +192,7 @@ extension ViewController: UITableViewDataSource {
         forRowAt indexPath: IndexPath
     ) {
         if editingStyle == .delete {
-            confirmDeleteTask(at: indexPath)
+            deleteTask(at: indexPath)
         }
     }
 }
@@ -236,7 +219,7 @@ extension ViewController: UITableViewDelegate {
             style: .destructive,
             title: nil
         ) { [weak self] _, _, completion in
-            self?.confirmDeleteTask(at: indexPath)
+            self?.deleteTask(at: indexPath)
             completion(false)
         }
         deleteAction.image = UIImage(systemName: "trash")
