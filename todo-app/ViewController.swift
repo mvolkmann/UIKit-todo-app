@@ -46,7 +46,8 @@ final class TodoStore {
 }
 
 final class ViewController: UIViewController {
-    private let tableView = UITableView(frame: .zero, style: .insetGrouped)
+    @IBOutlet weak var tableView: UITableView!
+
     private let store = TodoStore()
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -72,75 +73,18 @@ final class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         tasks = store.loadTasks()
-        configureView()
-        configureTableView()
     }
 
-    private func configureView() {
-        title = "TODO"
-        view.backgroundColor = .systemBackground
-
-        if navigationController == nil {
-            addEmbeddedNavigationBar()
-        }
-
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            title: "Edit",
-            style: .plain,
-            target: self,
-            action: #selector(toggleEditing)
-        )
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .add,
-            target: self,
-            action: #selector(addTask)
-        )
-    }
-
-    private func addEmbeddedNavigationBar() {
-        let navigationBar = UINavigationBar()
-        navigationBar.translatesAutoresizingMaskIntoConstraints = false
-        navigationBar.items = [navigationItem]
-        view.addSubview(navigationBar)
-
-        NSLayoutConstraint.activate([
-            navigationBar.topAnchor
-                .constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navigationBar.trailingAnchor
-                .constraint(equalTo: view.trailingAnchor)
-        ])
-    }
-
-    private func configureTableView() {
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.register(
-            UITableViewCell.self,
-            forCellReuseIdentifier: "TaskCell"
-        )
-        view.addSubview(tableView)
-
-        let topAnchor = view.subviews.compactMap { $0 as? UINavigationBar }
-            .first?.bottomAnchor ?? view.safeAreaLayoutGuide.topAnchor
-        NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: topAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-    }
-
-    @objc private func toggleEditing() {
+    @objc func toggleEditing() {
         isEditing.toggle()
     }
 
-    @objc private func addTask() {
+    @objc func addTask() {
         presentTaskEditor(title: "New Task", task: nil) { [weak self] task in
-            self?.tasks.append(task)
-            self?.tableView.insertRows(
-                at: [IndexPath(row: (self?.tasks.count ?? 1) - 1, section: 0)],
+            guard let self else { return }
+            tasks.append(task)
+            tableView.insertRows(
+                at: [IndexPath(row: tasks.count - 1, section: 0)],
                 with: .automatic
             )
         }
@@ -151,12 +95,16 @@ final class ViewController: UIViewController {
         task: TodoTask?,
         completion: @escaping (TodoTask) -> Void
     ) {
-        let editor = TaskEditorViewController(task: task)
+        let editor = storyboard?.instantiateViewController(
+            withIdentifier: "TaskEditorViewController"
+        ) as? TaskEditorViewController
+
+        guard let editor else { return }
         editor.title = title
+        editor.task = task
         editor.onSave = completion
 
-        let navigationController =
-            UINavigationController(rootViewController: editor)
+        let navigationController = UINavigationController(rootViewController: editor)
         navigationController.modalPresentationStyle = .formSheet
         present(navigationController, animated: true)
     }
@@ -169,13 +117,12 @@ final class ViewController: UIViewController {
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert
-            .addAction(UIAlertAction(
-                title: "Delete",
-                style: .destructive
-            ) { [weak self] _ in
-                self?.deleteTask(at: indexPath)
-            })
+        alert.addAction(UIAlertAction(
+            title: "Delete",
+            style: .destructive
+        ) { [weak self] _ in
+            self?.deleteTask(at: indexPath)
+        })
         present(alert, animated: true)
     }
 
@@ -200,14 +147,18 @@ final class ViewController: UIViewController {
     }
 
     private func configure(_ cell: UITableViewCell, with task: TodoTask) {
-        var content = cell.defaultContentConfiguration()
+        var content = UIListContentConfiguration.subtitleCell()
         content.text = task.description
-        content
-            .secondaryText =
+        content.secondaryText =
             "Due \(dateFormatter.string(from: task.dueDate)) • \(task.priority.rawValue) priority"
-        content.textProperties.color = task
-            .isComplete ? .secondaryLabel : .label
+        content.textProperties.color = task.isComplete ? .secondaryLabel : .label
         content.secondaryTextProperties.color = color(for: task.priority)
+        content.directionalLayoutMargins = NSDirectionalEdgeInsets(
+            top: 8,
+            leading: 16,
+            bottom: 8,
+            trailing: 16
+        )
         cell.contentConfiguration = content
         cell.accessoryType = task.isComplete ? .checkmark : .none
         cell.selectionStyle = .default
@@ -307,91 +258,18 @@ extension ViewController: UITableViewDelegate {
 }
 
 final class TaskEditorViewController: UIViewController {
+    @IBOutlet weak var descriptionField: UITextField!
+    @IBOutlet weak var dueDatePicker: UIDatePicker!
+    @IBOutlet weak var priorityControl: UISegmentedControl!
+
+    var task: TodoTask?
     var onSave: ((TodoTask) -> Void)?
-
-    private let descriptionField = UITextField()
-    private let dueDatePicker = UIDatePicker()
-    private let priorityControl = UISegmentedControl(
-        items: TodoTask.Priority
-            .allCases.map(\.rawValue)
-    )
-    private let task: TodoTask?
-
-    init(task: TodoTask?) {
-        self.task = task
-        super.init(nibName: nil, bundle: nil)
-    }
-
-    required init?(coder: NSCoder) {
-        task = nil
-        super.init(coder: coder)
-    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        configureView()
-        populateFields()
-    }
-
-    private func configureView() {
-        view.backgroundColor = .systemBackground
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .cancel,
-            target: self,
-            action: #selector(cancel)
-        )
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(save)
-        )
-
-        descriptionField.borderStyle = .roundedRect
-        descriptionField.placeholder = "Task description"
-        descriptionField.clearButtonMode = .whileEditing
-        descriptionField.returnKeyType = .done
         descriptionField.delegate = self
-
-        dueDatePicker.datePickerMode = .date
         dueDatePicker.preferredDatePickerStyle = .inline
-
-        priorityControl.selectedSegmentIndex = TodoTask.Priority.allCases
-            .firstIndex(of: .medium) ?? 0
-
-        let descriptionLabel = makeLabel(text: "Description")
-        let dueDateLabel = makeLabel(text: "Due Date")
-        let priorityLabel = makeLabel(text: "Priority")
-
-        let stackView = UIStackView(arrangedSubviews: [
-            descriptionLabel,
-            descriptionField,
-            dueDateLabel,
-            dueDatePicker,
-            priorityLabel,
-            priorityControl
-        ])
-        stackView.axis = .vertical
-        stackView.spacing = 12
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stackView)
-
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: 20
-            ),
-            stackView.leadingAnchor
-                .constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
-            stackView.trailingAnchor
-                .constraint(equalTo: view.layoutMarginsGuide.trailingAnchor)
-        ])
-    }
-
-    private func makeLabel(text: String) -> UILabel {
-        let label = UILabel()
-        label.text = text
-        label.font = .preferredFont(forTextStyle: .headline)
-        return label
+        populateFields()
     }
 
     private func populateFields() {
@@ -402,11 +280,11 @@ final class TaskEditorViewController: UIViewController {
             .firstIndex(of: task.priority) ?? 0
     }
 
-    @objc private func cancel() {
+    @objc func cancel() {
         dismiss(animated: true)
     }
 
-    @objc private func save() {
+    @objc func save() {
         let trimmedDescription = descriptionField.text?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !trimmedDescription.isEmpty else {
