@@ -22,6 +22,7 @@ enum Model {
     // a JSON file in the app's Documents directory.
     class TodoStore {
         private let fileURL: URL
+        private let fileManager: FileManager
 
         // Sets the fileURL property.
         init(fileManager: FileManager = .default) {
@@ -29,11 +30,17 @@ enum Model {
                 for: .documentDirectory,
                 in: .userDomainMask
             )[0]
+            self.fileManager = fileManager
             fileURL = documentsDirectory.appendingPathComponent("tasks.json")
         }
 
         // Reads JSON from fileURL and decodes into a TodoTask array.
+        // A missing file is expected on first launch, before any tasks are
+        // saved.
         func loadTasks() throws -> [TodoTask] {
+            guard fileManager.fileExists(atPath: fileURL.path)
+            else { return [] }
+
             let data = try Data(contentsOf: fileURL)
             return try JSONDecoder().decode([TodoTask].self, from: data)
         }
